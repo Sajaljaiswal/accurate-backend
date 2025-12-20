@@ -8,5 +8,6 @@ app.use(express.json());
 
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/patients", require("./routes/patient.routes"));
+app.use("/api/panels", require("./routes/panel.routes"));
 
 module.exports = app;

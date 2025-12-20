@@ -83,34 +83,55 @@ const patientSchema = new mongoose.Schema(
     },
 
     /* ---------------- BILLING ---------------- */
-    billing: {
-      grossTotal: {
-        type: Number,
-        required: true,
-      },
-      discountType: {
-        type: String,
-        enum: ["amount", "percent"],
-        default: "amount",
-      },
-      discountValue: {
-        type: Number,
-        default: 0,
-      },
-      discountAmount: {
-        type: Number,
-        default: 0,
-      },
-      netAmount: {
-        type: Number,
-        required: true,
-      },
-      paymentStatus: {
-        type: String,
-        enum: ["PENDING", "PAID"],
-        default: "PENDING",
-      },
-    },
+   billing: {
+  grossTotal: {
+    type: Number,
+    required: true,
+  },
+
+  discountType: {
+    type: String,
+    enum: ["amount", "percent"],
+    default: "amount",
+  },
+
+  discountValue: {
+    type: Number,
+    default: 0,
+  },
+
+  discountAmount: {
+    type: Number,
+    default: 0,
+  },
+
+  discountReason: {
+    type: String,
+    trim: true,
+  },
+
+  netAmount: {
+    type: Number,
+    required: true,
+  },
+
+  cashReceived: {
+    type: Number,
+    default: 0,
+  },
+
+  dueAmount: {
+    type: Number,
+    default: 0,
+  },
+
+  paymentStatus: {
+    type: String,
+    enum: ["PAID", "PARTIAL", "PENDING"],
+    default: "PENDING",
+  },
+},
+
 
     /* ---------------- SYSTEM ---------------- */
     createdBy: {
@@ -122,5 +143,7 @@ const patientSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+
 
 module.exports = mongoose.model("Patient", patientSchema);
