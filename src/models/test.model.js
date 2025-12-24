@@ -1,3 +1,4 @@
+// models/Test.js
 const mongoose = require("mongoose");
 
 const testSchema = new mongoose.Schema(
@@ -13,25 +14,17 @@ const testSchema = new mongoose.Schema(
       enum: ["BLOOD", "USG", "XRAY", "MRI", "OTHER"],
       required: true,
     },
-
-    // ✅ NEW FIELD
     sampleType: {
       type: String,
-      enum: ["BLOOD", "URINE", "STOOL", "SALIVA", "IMAGING", "NA"],
-      required: true,
+      enum: ["BLOOD", "URINE", "STOOL", "IMAGING", "NA"],
       default: "NA",
     },
-
-    price: {
+    defaultPrice: {
       type: Number,
       required: true,
       min: 0,
     },
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

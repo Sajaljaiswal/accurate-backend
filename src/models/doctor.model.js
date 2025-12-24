@@ -14,7 +14,6 @@ const doctorSchema = new mongoose.Schema(
     clinicPhone: String,
     email: String,
     dob: Date,
-    anniversary: Date,
     password: String,
     status: {
       type: String,

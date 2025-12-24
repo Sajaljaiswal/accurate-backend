@@ -16,13 +16,23 @@ exports.registerPatient = async (req, res) => {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const todayCount = await Patient.countDocuments({
-      createdAt: { $gte: startOfDay },
-    });
+    // const todayCount = await Patient.countDocuments({
+    //   createdAt: { $gte: startOfDay },
+    // });
 
-    const registrationNumber = (todayCount + 1)
-      .toString()
-      .padStart(3, "0"); // 001, 002, 003
+    const lastPatient = await Patient.findOne({})
+  .sort({ createdAt: -1 })
+  .select("registrationNumber");
+
+let nextNumber = 1;
+
+if (lastPatient?.registrationNumber) {
+  nextNumber = parseInt(lastPatient.registrationNumber, 10) + 1;
+}
+
+const registrationNumber = nextNumber
+  .toString()
+  .padStart(3, "0"); // 001, 002, 003 ...
 
     /* -------------------------------
        2️⃣ LAB NUMBER & ORDER ID
@@ -181,3 +191,31 @@ exports.getTodayPatients = async (req, res) => {
     });
   }
 };
+
+exports.updatePatient = async (req, res) => {
+  const patient = await Patient.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    { new: true }
+  );
+
+  res.json({ success: true, data: patient });
+};
+
+exports.settleBilling = async (req, res) => {
+  const { cashReceived, dueAmount, paymentStatus } = req.body;
+
+  const patient = await Patient.findByIdAndUpdate(
+    req.params.id,
+    {
+      "billing.cashReceived": cashReceived,
+      "billing.dueAmount": dueAmount,
+      "billing.paymentStatus": paymentStatus,
+    },
+    { new: true }
+  );
+
+  res.json({ success: true, data: patient });
+};
+
+
