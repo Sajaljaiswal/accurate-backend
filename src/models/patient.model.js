@@ -20,6 +20,10 @@ const testSchema = new mongoose.Schema(
 
 const patientSchema = new mongoose.Schema(
   {
+    labNumber: { type: String, unique: true },
+    registrationNumber: { type: String, unique: true }, // daily serial
+    orderId: { type: String, unique: true },
+
     /* ---------------- BASIC INFO ---------------- */
     panel: {
       type: String,
@@ -83,55 +87,54 @@ const patientSchema = new mongoose.Schema(
     },
 
     /* ---------------- BILLING ---------------- */
-   billing: {
-  grossTotal: {
-    type: Number,
-    required: true,
-  },
+    billing: {
+      grossTotal: {
+        type: Number,
+        required: true,
+      },
 
-  discountType: {
-    type: String,
-    enum: ["amount", "percent"],
-    default: "amount",
-  },
+      discountType: {
+        type: String,
+        enum: ["amount", "percent"],
+        default: "amount",
+      },
 
-  discountValue: {
-    type: Number,
-    default: 0,
-  },
+      discountValue: {
+        type: Number,
+        default: 0,
+      },
 
-  discountAmount: {
-    type: Number,
-    default: 0,
-  },
+      discountAmount: {
+        type: Number,
+        default: 0,
+      },
 
-  discountReason: {
-    type: String,
-    trim: true,
-  },
+      discountReason: {
+        type: String,
+        trim: true,
+      },
 
-  netAmount: {
-    type: Number,
-    required: true,
-  },
+      netAmount: {
+        type: Number,
+        required: true,
+      },
 
-  cashReceived: {
-    type: Number,
-    default: 0,
-  },
+      cashReceived: {
+        type: Number,
+        default: 0,
+      },
 
-  dueAmount: {
-    type: Number,
-    default: 0,
-  },
+      dueAmount: {
+        type: Number,
+        default: 0,
+      },
 
-  paymentStatus: {
-    type: String,
-    enum: ["PAID", "PARTIAL", "PENDING"],
-    default: "PENDING",
-  },
-},
-
+      paymentStatus: {
+        type: String,
+        enum: ["PAID", "PARTIAL", "PENDING"],
+        default: "PENDING",
+      },
+    },
 
     /* ---------------- SYSTEM ---------------- */
     createdBy: {

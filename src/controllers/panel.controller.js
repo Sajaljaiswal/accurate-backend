@@ -71,3 +71,4 @@ exports.getAllPanels = async (req, res) => {
     });
   }
 };
+
