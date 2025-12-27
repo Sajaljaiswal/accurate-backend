@@ -9,10 +9,10 @@ exports.addTest = async (req, res) => {
       category, 
       unit, 
       inputType, 
-      sampleType, 
       defaultPrice, 
       defaultResult, 
       isOptional,
+      referenceRanges,
       isActive 
     } = req.body;
 
@@ -29,8 +29,9 @@ exports.addTest = async (req, res) => {
       category, 
       unit,
       inputType,
-      sampleType,
+      
       defaultPrice,
+      referenceRanges,
       defaultResult,
       isOptional,
       isActive

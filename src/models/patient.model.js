@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 
-const testSchema = new mongoose.Schema(
+// This schema represents the test state AT THE TIME of registration/reporting
+const patientTestSchema = new mongoose.Schema(
   {
     testId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Test", // optional if you have test master
+      ref: "Test",
     },
     name: {
       type: String,
@@ -14,6 +15,22 @@ const testSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    /* --- ADDED FIELDS FOR LAB RESULTS --- */
+    resultValue: {
+      type: String, // String to allow for non-numeric results like "Positive"
+      default: "", 
+    },
+    unit: {
+      type: String, // e.g., "cumm" or "g/dl"
+    },
+    referenceRange: {
+      type: String, // e.g., "0 - 440"
+    },
+    status: {
+      type: String,
+      enum: ["Pending", "Authorized", "Cancelled"],
+      default: "Pending",
+    }
   },
   { _id: false }
 );
@@ -21,7 +38,7 @@ const testSchema = new mongoose.Schema(
 const patientSchema = new mongoose.Schema(
   {
     labNumber: { type: String, unique: true },
-    registrationNumber: { type: String, unique: true }, // daily serial
+    registrationNumber: { type: String, unique: true },
     orderId: { type: String, unique: true },
 
     /* ---------------- BASIC INFO ---------------- */
@@ -82,7 +99,7 @@ const patientSchema = new mongoose.Schema(
 
     /* ---------------- TESTS ---------------- */
     tests: {
-      type: [testSchema],
+      type: [patientTestSchema],
       default: [],
     },
 
@@ -142,11 +159,7 @@ const patientSchema = new mongoose.Schema(
       ref: "User", // SUPERADMIN / STAFF
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
-
-
 
 module.exports = mongoose.model("Patient", patientSchema);

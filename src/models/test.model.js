@@ -21,7 +21,14 @@ const testSchema = new mongoose.Schema(
       enum: ["Numeric", "Text", "RichText"],
       default: "Numeric",
     },
-  
+  referenceRanges: [{
+    gender: { type: String, enum: ["Male", "Female", "BOTH"], default: "BOTH" },
+    ageMin: { type: Number, default: 0 },
+    ageMax: { type: Number, default: 100 },
+    lowRange: { type: String },
+    highRange: { type: String },
+    unit: { type: String } // Can be inherited from test unit
+  }],
     defaultPrice: {
       type: Number,
       required: true,
