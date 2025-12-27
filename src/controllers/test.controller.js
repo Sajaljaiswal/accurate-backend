@@ -2,20 +2,38 @@ const Test = require("../models/test.model");
 
 exports.addTest = async (req, res) => {
   try {
-    const { name, category, sampleType, price } = req.body;
+    // 1. Destructure all new fields from the request body
+    const { 
+      name, 
+      shortName, 
+      category, 
+      unit, 
+      inputType, 
+      sampleType, 
+      defaultPrice, 
+      defaultResult, 
+      isOptional,
+      isActive 
+    } = req.body;
 
-    if (!name || !category || !sampleType || price === undefined) {
+    if (!name || !category || defaultPrice === undefined) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required",
+        message: "Name, Category, and Price are required fields",
       });
     }
 
     const test = await Test.create({
       name,
-      category,
+      shortName,
+      category, 
+      unit,
+      inputType,
       sampleType,
-      price,
+      defaultPrice,
+      defaultResult,
+      isOptional,
+      isActive
     });
 
     res.status(201).json({
@@ -33,7 +51,9 @@ exports.addTest = async (req, res) => {
 
 exports.getAllTests = async (req, res) => {
   try {
-    const tests = await Test.find({ isActive: true }).sort({ name: 1 });
+    const tests = await Test.find({ isActive: true })
+      .populate("category", "name") 
+       .sort({ name: 1 });
 
     res.json({
       success: true,

@@ -10,20 +10,25 @@ const testSchema = new mongoose.Schema(
     },
 
     category: {
-      type: String,
-      enum: ["BLOOD", "USG", "XRAY", "MRI", "OTHER"],
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: true,
     },
-    sampleType: {
+    shortName: { type: String }, // Added based on your UI
+    unit: { type: String }, // Added based on your UI
+    inputType: {
       type: String,
-      enum: ["BLOOD", "URINE", "STOOL", "IMAGING", "NA"],
-      default: "NA",
+      enum: ["Numeric", "Text", "RichText"],
+      default: "Numeric",
     },
+  
     defaultPrice: {
       type: Number,
       required: true,
       min: 0,
     },
+    defaultResult: { type: String },
+    isOptional: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

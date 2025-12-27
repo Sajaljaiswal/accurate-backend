@@ -9,9 +9,9 @@ const {
   getDoctorTests,
   assignDoctorTest,
 } = require("../controllers/doctorTest.controller");
-router.post("/", assignDoctorTest);          // POST /api/doctor-tests
-router.get("/doctor/:doctorId", getDoctorTests);    // GET  /api/doctor-tests/:doctorId
-router.put("/:id", updateDoctorTest);        // PUT  /api/doctor-tests/:id
+router.post("/", assignDoctorTest);         
+router.get("/doctor/:doctorId", getDoctorTests);   
+router.put("/:id", updateDoctorTest);      
 router.patch("/:id/toggle", toggleDoctorTest);
 
 module.exports = router;
