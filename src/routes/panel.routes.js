@@ -9,4 +9,5 @@ const {
 router.post("/register", registerPanel);
 router.get("/", getAllPanels);
 
+
 module.exports = router;

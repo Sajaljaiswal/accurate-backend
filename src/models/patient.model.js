@@ -97,13 +97,11 @@ const patientSchema = new mongoose.Schema(
       },
     },
 
-    /* ---------------- TESTS ---------------- */
     tests: {
       type: [patientTestSchema],
       default: [],
     },
 
-    /* ---------------- BILLING ---------------- */
     billing: {
       grossTotal: {
         type: Number,
@@ -161,5 +159,7 @@ const patientSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+
 
 module.exports = mongoose.model("Patient", patientSchema);

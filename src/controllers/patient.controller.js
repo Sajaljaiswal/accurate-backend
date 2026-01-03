@@ -1,17 +1,12 @@
 const Patient = require("../models/patient.model");
-const Test = require("../models/test.model"); 
+const Test = require("../models/test.model");
 
 exports.registerPatient = async (req, res) => {
   try {
     const data = req.body;
     const { gender, age, tests } = data;
 
-    /* -------------------------------
-        1️⃣ GENERATE IDS (Lab No, Reg No)
-    --------------------------------*/
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
+    // --- 1. GENERATE IDENTIFIERS ---
     const lastPatient = await Patient.findOne({})
       .sort({ createdAt: -1 })
       .select("registrationNumber");
@@ -28,38 +23,43 @@ exports.registerPatient = async (req, res) => {
     /* -------------------------------------------
         2️⃣ SNAPSHOT TEST DATA (Reference Ranges)
     --------------------------------------------*/
-    // We process the incoming tests to attach clinical metadata from the Master DB
-    const processedTests = await Promise.all(tests.map(async (t) => {
-      const masterTest = await Test.findById(t.testId);
-      
-      if (!masterTest) return t; // Fallback if test not found
+    const processedTests = await Promise.all(
+      tests.map(async (t) => {
+        const masterTest = await Test.findById(t.testId);
 
-      // Find the specific reference range based on patient gender and age
-      const matchedRange = masterTest.referenceRanges.find(r => 
-        (r.gender === gender || r.gender === 'All') && 
-        (age >= r.ageMin && age <= r.ageMax)
-      );
+        if (!masterTest) return t;
 
-      return {
-        testId: t.testId,
-        name: masterTest.name,
-        price: Number(t.price),
-        unit: masterTest.unit, // Snapshot the unit
-        // Snapshot the range as a string for easy reporting
-        referenceRange: matchedRange 
-          ? `${matchedRange.lowRange} - ${matchedRange.highRange}` 
-          : "Refer to result",
-        resultValue: "" // Initially empty until technician fills it
-      };
-    }));
+        const matchedRange = masterTest.referenceRanges.find(
+          (r) =>
+            (r.gender === gender || r.gender === "All") &&
+            age >= r.ageMin &&
+            age <= r.ageMax
+        );
+
+        return {
+          testId: t.testId,
+          name: masterTest.name,
+          price: Number(t.price),
+          unit: masterTest.unit,
+          referenceRange: matchedRange
+            ? `${matchedRange.lowRange} - ${matchedRange.highRange}`
+            : "Refer to result",
+          resultValue: "", // Initially empty until technician fills it
+        };
+      })
+    );
 
     /* -------------------------------
         3️⃣ BILLING CALCULATION
     --------------------------------*/
-    const grossTotal = processedTests.reduce((sum, t) => sum + Number(t.price), 0);
-    let discountAmount = data.billing.discountType === "percent"
-      ? (grossTotal * (data.billing.discountValue || 0)) / 100
-      : Number(data.billing.discountValue || 0);
+    const grossTotal = processedTests.reduce(
+      (sum, t) => sum + Number(t.price),
+      0
+    );
+    let discountAmount =
+      data.billing.discountType === "percent"
+        ? (grossTotal * (data.billing.discountValue || 0)) / 100
+        : Number(data.billing.discountValue || 0);
 
     const netAmount = Math.max(0, grossTotal - discountAmount);
     const cashReceived = Number(data.billing.cashReceived || 0);
@@ -70,7 +70,7 @@ exports.registerPatient = async (req, res) => {
     else if (cashReceived > 0) paymentStatus = "PARTIAL";
 
     /* -------------------------------
-        4️⃣ SAVE PATIENT WITH TESTS
+        4️⃣ SAVE PATIENT WITH CREATEDBY
     --------------------------------*/
     const patient = await Patient.create({
       ...data,
@@ -78,6 +78,9 @@ exports.registerPatient = async (req, res) => {
       labNumber,
       orderId,
       tests: processedTests,
+      // CHANGE: Link the logged-in user to this record
+      // This assumes your auth middleware (protect/verifyToken) sets req.user
+      createdBy: req.user ? req.user._id : data.createdBy,
       billing: {
         ...data.billing,
         grossTotal,
@@ -91,10 +94,11 @@ exports.registerPatient = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Patient registered with snapshots",
+      message: "Patient registered successfully",
       data: patient,
     });
   } catch (err) {
+    console.error("Registration Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -175,12 +179,25 @@ exports.getTodayPatients = async (req, res) => {
   }
 };
 
+// backend/controllers/patientController.js
 exports.updatePatient = async (req, res) => {
-  const patient = await Patient.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
+  try {
+    const patient = await Patient.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body }, // Use $set to ensure nested objects are overwritten correctly
+      { new: true, runValidators: true }
+    );
 
-  res.json({ success: true, data: patient });
+    if (!patient) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Patient not found" });
+    }
+
+    res.json({ success: true, data: patient });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 exports.settleBilling = async (req, res) => {
@@ -202,12 +219,14 @@ exports.settleBilling = async (req, res) => {
 // PUT /api/patients/:id/results
 exports.updateTestResults = async (req, res) => {
   const { patientId } = req.params;
-  const { testId, resultValue } = req.body; 
+  const { testId, resultValue } = req.body;
 
   const patient = await Patient.findById(patientId);
-  
+
   // Find the specific test in the patient's array and update its value
-  const testToUpdate = patient.tests.find(t => t.testId.toString() === testId);
+  const testToUpdate = patient.tests.find(
+    (t) => t.testId.toString() === testId
+  );
   if (testToUpdate) {
     testToUpdate.resultValue = resultValue;
     testToUpdate.status = "Authorized";
@@ -226,7 +245,9 @@ exports.updateBulkResults = async (req, res) => {
 
     const patient = await Patient.findById(id);
     if (!patient) {
-      return res.status(404).json({ success: false, message: "Patient not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Patient not found" });
     }
 
     // Update the resultValue for each matching testId
@@ -238,7 +259,7 @@ exports.updateBulkResults = async (req, res) => {
       if (testIndex !== -1) {
         patient.tests[testIndex].resultValue = incomingTest.resultValue;
         // Optionally update status to authorized since result is entered
-        patient.tests[testIndex].status = "Authorized"; 
+        patient.tests[testIndex].status = "Authorized";
       }
     });
 
@@ -254,11 +275,10 @@ exports.updateBulkResults = async (req, res) => {
   }
 };
 
-
 exports.getPatientById = async (req, res) => {
   try {
     const patient = await Patient.findById(req.params.id);
-    
+
     if (!patient) {
       return res.status(404).json({
         success: false,
@@ -275,5 +295,74 @@ exports.getPatientById = async (req, res) => {
       success: false,
       message: "Server Error: " + err.message,
     });
+  }
+};
+exports.getDailyBusinessStats = async (req, res) => {
+  try {
+    let { date } = req.query;
+
+    if (!date || isNaN(new Date(date).getTime())) {
+      date = new Date().toISOString().split("T")[0];
+    }
+
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    const patients = await Patient.find({
+      createdAt: { $gte: start, $lte: end },
+    });
+
+    const totalPatients = patients.length;
+
+    const totalRevenue = patients.reduce(
+      (sum, p) => sum + Number(p.netAmount || p.totalAmount || 0),
+      0
+    );
+
+    const totalTests = patients.reduce(
+      (sum, p) => sum + (p.tests?.length || 0),
+      0
+    );
+
+    const avgTicket =
+      totalPatients > 0 ? Math.round(totalRevenue / totalPatients) : 0;
+
+    // Hourly data
+    const hourlyMap = {};
+
+    patients.forEach((p) => {
+      const hour = new Date(p.createdAt).getHours();
+
+      if (!hourlyMap[hour]) {
+        hourlyMap[hour] = { revenue: 0, tests: 0 };
+      }
+
+      hourlyMap[hour].revenue += Number(
+        p.netAmount || p.totalAmount || 0
+      );
+      hourlyMap[hour].tests += p.tests?.length || 0;
+    });
+
+    const hourlyData = Array.from({ length: 24 }, (_, h) => ({
+      time: `${h}:00`,
+      revenue: hourlyMap[h]?.revenue || 0,
+      tests: hourlyMap[h]?.tests || 0,
+    }));
+
+    res.json({
+      date,
+      totalRevenue,
+      totalPatients,
+      totalTests,
+      avgTicket,
+      hourlyData,
+      recentBookings: patients.slice(-5).reverse(),
+    });
+  } catch (error) {
+    console.error("Daily business error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
