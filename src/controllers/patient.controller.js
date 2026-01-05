@@ -152,6 +152,33 @@ exports.getAllPatients = async (req, res) => {
   }
 };
 
+// Example: patientController.js
+
+exports.getPatientById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // The .populate('tests.testId') is the key. 
+    // It tells Mongoose to look at the 'testId' inside the 'tests' array 
+    // and replace that ID with the actual document from the Tests collection.
+    const patient = await Patient.findById(id).populate({
+      path: 'tests.testId',
+      select: 'defaultResult name referenceRange unit' // Optional: select specific fields you need
+    });
+
+    if (!patient) {
+      return res.status(404).json({ success: false, message: "Patient not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: patient
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getTodayPatients = async (req, res) => {
   try {
     const startOfDay = new Date();

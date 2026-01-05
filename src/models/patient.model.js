@@ -128,6 +128,10 @@ const patientSchema = new mongoose.Schema(
         type: String,
         trim: true,
       },
+       approvedBy: {
+        type: String,
+        trim: true,
+      },
 
       netAmount: {
         type: Number,
@@ -136,7 +140,6 @@ const patientSchema = new mongoose.Schema(
 
       cashReceived: {
         type: Number,
-        default: 0,
       },
 
       dueAmount: {
@@ -146,14 +149,13 @@ const patientSchema = new mongoose.Schema(
 
       paymentStatus: {
         type: String,
-        enum: ["PAID", "PARTIAL", "PENDING"],
+        enum: ["PAID", "PARTIAL", "PENDING", "UNPAID", "REFUNDED"],
         default: "PENDING",
       },
     },
 
-    /* ---------------- SYSTEM ---------------- */
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "User", // SUPERADMIN / STAFF
     },
   },
