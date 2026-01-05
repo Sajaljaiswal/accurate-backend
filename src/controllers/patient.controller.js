@@ -1,5 +1,8 @@
 const Patient = require("../models/patient.model");
 const Test = require("../models/test.model");
+const ExcelJS = require("exceljs");
+const PDFDocument = require("pdfkit");
+
 
 exports.registerPatient = async (req, res) => {
   try {
@@ -45,6 +48,8 @@ exports.registerPatient = async (req, res) => {
             ? `${matchedRange.lowRange} - ${matchedRange.highRange}`
             : "Refer to result",
           resultValue: "", // Initially empty until technician fills it
+          defaultResult: masterTest.defaultResult || "",
+          reportType: masterTest.defaultResult ? "text" : "range",
         };
       })
     );
@@ -158,21 +163,39 @@ exports.getPatientById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // The .populate('tests.testId') is the key. 
-    // It tells Mongoose to look at the 'testId' inside the 'tests' array 
-    // and replace that ID with the actual document from the Tests collection.
+    // 1. Fetch and Populate
     const patient = await Patient.findById(id).populate({
-      path: 'tests.testId',
-      select: 'defaultResult name referenceRange unit' // Optional: select specific fields you need
+      path: "tests.testId",
+      select: "defaultResult", // We only need this one field from the Master Test
     });
 
     if (!patient) {
-      return res.status(404).json({ success: false, message: "Patient not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Patient not found" });
     }
+
+    // Convert to plain object to allow modifications
+    const patientObj = patient.toObject();
+
+    // 2. REVERT testId to original string logic
+    // This ensures your frontend 'testId' stays exactly as it was before
+    patientObj.tests = patientObj.tests.map((test) => {
+      // Pull the template from the populated object
+      const template = test.testId?.defaultResult || "";
+
+      return {
+        ...test,
+        // We put the ID back as a string so your original logic doesn't break
+        testId: test.testId?._id || test.testId,
+        // We add the template as a direct field
+        defaultResult: test.defaultResult || template,
+      };
+    });
 
     res.status(200).json({
       success: true,
-      data: patient
+      data: patientObj,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -324,53 +347,94 @@ exports.getPatientById = async (req, res) => {
     });
   }
 };
+
 exports.getDailyBusinessStats = async (req, res) => {
   try {
-    let { date } = req.query;
+    let { startDate, endDate } = req.query;
 
-    if (!date || isNaN(new Date(date).getTime())) {
-      date = new Date().toISOString().split("T")[0];
+    if (!startDate || !endDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      startDate = today;
+      endDate = today;
     }
 
-    const start = new Date(date);
+    const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
 
-    const end = new Date(date);
+    const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
 
-    const patients = await Patient.find({
-      createdAt: { $gte: start, $lte: end },
-    });
+    const pipeline = [
+      {
+        $match: {
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
 
-    const totalPatients = patients.length;
+      {
+        $facet: {
+          // 🧮 MAIN TOTALS
+          summary: [
+            {
+              $group: {
+                _id: null,
+                totalRevenue: { $sum: "$billing.netAmount" },
+                totalPatients: { $sum: 1 },
+                totalTests: { $sum: { $size: "$tests" } },
+              },
+            },
+          ],
 
-    const totalRevenue = patients.reduce(
-      (sum, p) => sum + Number(p.netAmount || p.totalAmount || 0),
-      0
-    );
+          // 💰 PAID vs UNPAID
+          paymentSplit: [
+            {
+              $group: {
+                _id: "$billing.paymentStatus",
+                revenue: { $sum: "$billing.netAmount" },
+                count: { $sum: 1 },
+              },
+            },
+          ],
 
-    const totalTests = patients.reduce(
-      (sum, p) => sum + (p.tests?.length || 0),
-      0
-    );
+          // 📊 PANEL-WISE REVENUE
+          panelWise: [
+            {
+              $group: {
+                _id: "$panel",
+                revenue: { $sum: "$billing.netAmount" },
+                patients: { $sum: 1 },
+              },
+            },
+          ],
 
-    const avgTicket =
-      totalPatients > 0 ? Math.round(totalRevenue / totalPatients) : 0;
+          // ⏰ HOURLY DATA
+          hourly: [
+            {
+              $group: {
+                _id: { $hour: "$createdAt" },
+                revenue: { $sum: "$billing.netAmount" },
+                tests: { $sum: { $size: "$tests" } },
+              },
+            },
+          ],
 
-    // Hourly data
+          // 📋 RECENT BOOKINGS
+          recent: [
+            { $sort: { createdAt: -1 } },
+            { $limit: 5 },
+          ],
+        },
+      },
+    ];
+
+    const [result] = await Patient.aggregate(pipeline);
+
+    const summary = result.summary[0] || {};
     const hourlyMap = {};
 
-    patients.forEach((p) => {
-      const hour = new Date(p.createdAt).getHours();
-
-      if (!hourlyMap[hour]) {
-        hourlyMap[hour] = { revenue: 0, tests: 0 };
-      }
-
-      hourlyMap[hour].revenue += Number(
-        p.netAmount || p.totalAmount || 0
-      );
-      hourlyMap[hour].tests += p.tests?.length || 0;
+    result.hourly.forEach((h) => {
+      hourlyMap[h._id] = h;
     });
 
     const hourlyData = Array.from({ length: 24 }, (_, h) => ({
@@ -380,16 +444,75 @@ exports.getDailyBusinessStats = async (req, res) => {
     }));
 
     res.json({
-      date,
-      totalRevenue,
-      totalPatients,
-      totalTests,
-      avgTicket,
+      startDate,
+      endDate,
+      totalRevenue: summary.totalRevenue || 0,
+      totalPatients: summary.totalPatients || 0,
+      totalTests: summary.totalTests || 0,
+      avgTicket:
+        summary.totalPatients > 0
+          ? Math.round(summary.totalRevenue / summary.totalPatients)
+          : 0,
+
+      paymentSplit: result.paymentSplit,
+      panelWise: result.panelWise,
       hourlyData,
-      recentBookings: patients.slice(-5).reverse(),
+      recentBookings: result.recent,
     });
-  } catch (error) {
-    console.error("Daily business error:", error);
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error("Business stats error:", err);
+    res.status(500).json({ message: err.message });
   }
 };
+
+
+exports.exportBusinessExcel = async (req, res) => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Business Report");
+
+  sheet.columns = [
+    { header: "Panel", key: "panel", width: 25 },
+    { header: "Revenue", key: "revenue", width: 15 },
+    { header: "Patients", key: "patients", width: 15 },
+  ];
+
+  req.body.panelWise.forEach((p) => {
+    sheet.addRow({
+      panel: p._id,
+      revenue: p.revenue,
+      patients: p.patients,
+    });
+  });
+
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", "attachment; filename=report.xlsx");
+
+  await workbook.xlsx.write(res);
+  res.end();
+};
+
+
+
+exports.exportBusinessPDF = (req, res) => {
+  const doc = new PDFDocument();
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "attachment; filename=report.pdf");
+
+  doc.pipe(res);
+
+  doc.fontSize(18).text("Business Report", { align: "center" });
+  doc.moveDown();
+
+  req.body.panelWise.forEach((p) => {
+    doc.fontSize(12).text(
+      `${p._id} : ₹${p.revenue} (${p.patients} patients)`
+    );
+  });
+
+  doc.end();
+};
+

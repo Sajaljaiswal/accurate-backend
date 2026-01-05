@@ -15,6 +15,21 @@ const patientTestSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    defaultResult: {
+      type: String,
+      default: "",
+    },
+    // Stores the edited content from CKEditor
+    richTextContent: {
+      type: String,
+      default: "",
+    },
+    // Remembers if this test was "range" or "text" mode
+    reportType: {
+      type: String,
+      enum: ["range", "text"],
+      default: "range",
+    },
     /* --- ADDED FIELDS FOR LAB RESULTS --- */
     resultValue: {
       type: String, // String to allow for non-numeric results like "Positive"
