@@ -28,7 +28,6 @@ const panelSchema = new mongoose.Schema(
     contact: {
       mobile: {
         type: String,
-        required: true,
       },
       email: {
         type: String,

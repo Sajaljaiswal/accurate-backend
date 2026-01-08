@@ -110,13 +110,22 @@ exports.registerPatient = async (req, res) => {
 
 exports.getAllPatients = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search, fromDate, toDate } = req.query;
+    const {
+      page = 1,
+      limit = 5,
+      search = "",
+      fromDate = "",
+      toDate = "",
+    } = req.query;
 
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    const query = {};
+    // 🔎 Build Query
+    let query = {};
 
-    // 🔍 Search (name / mobile / lab / order)
+    // Search: name / mobile / lab / order
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: "i" } },
@@ -126,19 +135,20 @@ exports.getAllPatients = async (req, res) => {
       ];
     }
 
-    // 📅 Date filter
+    // Date Filter
     if (fromDate || toDate) {
       query.createdAt = {};
       if (fromDate) query.createdAt.$gte = new Date(fromDate);
-      if (toDate) query.createdAt.$lte = new Date(toDate + "T23:59:59");
+      if (toDate)
+        query.createdAt.$lte = new Date(toDate + "T23:59:59");
     }
 
-    const [patients, total] = await Promise.all([
+    const [patients, totalItems] = await Promise.all([
       Patient.find(query)
         .populate("panel", "name")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(limitNum),
       Patient.countDocuments(query),
     ]);
 
@@ -146,18 +156,21 @@ exports.getAllPatients = async (req, res) => {
       success: true,
       data: patients,
       pagination: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / limit),
+        totalItems,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(totalItems / limitNum),
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
-// Example: patientController.js
+
 
 exports.getPatientById = async (req, res) => {
   try {
