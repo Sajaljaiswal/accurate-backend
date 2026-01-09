@@ -121,7 +121,7 @@ exports.getAllPatients = async (req, res) => {
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
-
+console.log(req, res, ">>>>>>>>>>>>>>>>>>>")
     // 🔎 Build Query
     let query = {};
 
@@ -135,13 +135,23 @@ exports.getAllPatients = async (req, res) => {
       ];
     }
 
-    // Date Filter
-    if (fromDate || toDate) {
-      query.createdAt = {};
-      if (fromDate) query.createdAt.$gte = new Date(fromDate);
-      if (toDate)
-        query.createdAt.$lte = new Date(toDate + "T23:59:59");
-    }
+   // Date Filter (CORRECT)
+if (fromDate || toDate) {
+  query.createdAt = {};
+
+  if (fromDate) {
+    const start = new Date(fromDate);
+    start.setHours(0, 0, 0, 0); // local start of day
+    query.createdAt.$gte = start;
+  }
+
+  if (toDate) {
+    const end = new Date(toDate);
+    end.setHours(23, 59, 59, 999); // local end of day
+    query.createdAt.$lte = end;
+  }
+}
+
 
     const [patients, totalItems] = await Promise.all([
       Patient.find(query)
@@ -151,7 +161,7 @@ exports.getAllPatients = async (req, res) => {
         .limit(limitNum),
       Patient.countDocuments(query),
     ]);
-
+    console.log(patients, "2222222222222222")
     res.json({
       success: true,
       data: patients,

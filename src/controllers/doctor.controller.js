@@ -18,10 +18,44 @@ exports.createDoctor = async (req, res) => {
 
 exports.getAllDoctor = async (req, res) => {
   try {
-    const doctor = await Doctor.find().sort({ createdAt: -1 });
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+    } = req.query;
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // 🔍 Build query
+    let query = {};
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { specialization: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [doctors, totalItems] = await Promise.all([
+      Doctor.find(query)
+        .sort({ name: 1 }) // alphabetical for dropdown
+        .skip(skip)
+        .limit(limitNum),
+
+      Doctor.countDocuments(query),
+    ]);
+
     res.json({
       success: true,
-      data: doctor,
+      data: doctors,
+      pagination: {
+        totalItems,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(totalItems / limitNum),
+      },
     });
   } catch (err) {
     res.status(500).json({
