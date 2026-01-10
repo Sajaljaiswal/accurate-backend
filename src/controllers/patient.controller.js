@@ -112,7 +112,7 @@ exports.getAllPatients = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 5,
+      limit = 100,
       search = "",
       fromDate = "",
       toDate = "",
@@ -121,7 +121,6 @@ exports.getAllPatients = async (req, res) => {
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
-console.log(req, res, ">>>>>>>>>>>>>>>>>>>")
     // 🔎 Build Query
     let query = {};
 
@@ -161,7 +160,6 @@ if (fromDate || toDate) {
         .limit(limitNum),
       Patient.countDocuments(query),
     ]);
-    console.log(patients, "2222222222222222")
     res.json({
       success: true,
       data: patients,
