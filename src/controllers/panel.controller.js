@@ -57,12 +57,35 @@ exports.registerPanel = async (req, res) => {
 
 exports.getAllPanels = async (req, res) => {
   try {
-    const panels = await Panel.find().sort({ createdAt: -1 });
+    const { page = 1, limit = 20, search = "" } = req.query;
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    let query = {};
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+
+    const [panels, totalItems] = await Promise.all([
+      Panel.find(query)
+        .sort({ name: 1 }) // Sort alphabetically for easier selection
+        .skip(skip)
+        .limit(limitNum),
+      Panel.countDocuments(query),
+    ]);
+    console.log(panels, "......")
 
     res.json({
       success: true,
-      count: panels.length,
       data: panels,
+      pagination: {
+        totalItems,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(totalItems / limitNum),
+      },
     });
   } catch (err) {
     res.status(500).json({
@@ -71,4 +94,3 @@ exports.getAllPanels = async (req, res) => {
     });
   }
 };
-
