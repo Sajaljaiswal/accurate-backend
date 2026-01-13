@@ -3,7 +3,6 @@ const router = express.Router();
 const patientController = require("../controllers/patient.controller");
 const { registerPatient, getAllPatients, getTodayPatients, updatePatient, settleBilling, getDailyBusinessStats } = require("../controllers/patient.controller");
 router.get("/business-stats", getDailyBusinessStats);
-
 router.post("/register", registerPatient);
 router.get("/", getAllPatients);
 router.get("/today/count", getTodayPatients);

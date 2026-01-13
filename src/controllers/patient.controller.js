@@ -253,23 +253,54 @@ exports.getTodayPatients = async (req, res) => {
 // backend/controllers/patientController.js
 exports.updatePatient = async (req, res) => {
   try {
-    const patient = await Patient.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body }, // Use $set to ensure nested objects are overwritten correctly
-      { new: true, runValidators: true }
-    );
+    const { tests, ...otherFields } = req.body;
 
+    const patient = await Patient.findById(req.params.id);
     if (!patient) {
       return res
         .status(404)
         .json({ success: false, message: "Patient not found" });
     }
 
-    res.json({ success: true, data: patient });
+    /* ---------------- UPDATE NON-TEST FIELDS SAFELY ---------------- */
+    Object.keys(otherFields).forEach((key) => {
+      patient[key] = otherFields[key];
+    });
+
+    /* ---------------- UPDATE TEST RESULTS SAFELY ---------------- */
+    if (Array.isArray(tests)) {
+      patient.tests = tests.map((t) => ({
+        testId: t.testId,
+        name: t.name,
+        price: t.price,
+        reportType: t.reportType || "range",
+        defaultResult: t.defaultResult || "",
+        richTextContent: t.richTextContent || "",
+        resultValue: t.resultValue || "",
+        unit: t.unit || "",
+        referenceRange: t.referenceRange || "",
+        status: t.status || "Pending",
+        notes: t.notes || "",
+        remarks: t.remarks || "",
+        advice: t.advice || "",
+      }));
+    }
+
+    await patient.save();
+
+    return res.json({
+      success: true,
+      data: patient,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Update patient error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error",
+    });
   }
 };
+
 
 exports.settleBilling = async (req, res) => {
   const { cashReceived, dueAmount, paymentStatus } = req.body;

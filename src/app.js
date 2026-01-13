@@ -14,4 +14,5 @@ app.use("/api/lab/tests", require("./routes/test.routes"));
 // ✅ Register route
 app.use("/api/doctorTests", require("./routes/doctorTest.routes"));
 app.use("/api/categories", require("./routes/categoryRoutes"));
+app.use('/api/home-collections', require("./routes/homeCollection.routes"));
 module.exports = app;

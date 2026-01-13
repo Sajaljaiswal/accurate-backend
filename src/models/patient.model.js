@@ -33,7 +33,7 @@ const patientTestSchema = new mongoose.Schema(
     /* --- ADDED FIELDS FOR LAB RESULTS --- */
     resultValue: {
       type: String, // String to allow for non-numeric results like "Positive"
-      default: "", 
+      default: "",
     },
     unit: {
       type: String, // e.g., "cumm" or "g/dl"
@@ -45,7 +45,23 @@ const patientTestSchema = new mongoose.Schema(
       type: String,
       enum: ["Pending", "Authorized", "Cancelled"],
       default: "Pending",
-    }
+    },
+    isPrinted: { type: Boolean, default: false },
+    notes: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    remarks: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    advice: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { _id: false }
 );
@@ -55,7 +71,6 @@ const patientSchema = new mongoose.Schema(
     labNumber: { type: String, unique: true },
     registrationNumber: { type: String, unique: true },
     orderId: { type: String, unique: true },
-
     /* ---------------- BASIC INFO ---------------- */
     panel: {
       type: String,
@@ -116,7 +131,7 @@ const patientSchema = new mongoose.Schema(
       type: [patientTestSchema],
       default: [],
     },
-
+    isSignedOff: { type: Boolean, default: false },
     billing: {
       grossTotal: {
         type: Number,
@@ -143,7 +158,7 @@ const patientSchema = new mongoose.Schema(
         type: String,
         trim: true,
       },
-       approvedBy: {
+      approvedBy: {
         type: String,
         trim: true,
       },
@@ -176,7 +191,5 @@ const patientSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-
 
 module.exports = mongoose.model("Patient", patientSchema);
