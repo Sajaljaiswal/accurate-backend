@@ -33,7 +33,7 @@ exports.getAllDoctor = async (req, res) => {
 
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
+        { fullName: { $regex: search, $options: "i" } },
         { specialization: { $regex: search, $options: "i" } },
       ];
     }

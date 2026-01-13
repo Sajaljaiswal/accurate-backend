@@ -283,6 +283,7 @@ exports.updatePatient = async (req, res) => {
         notes: t.notes || "",
         remarks: t.remarks || "",
         advice: t.advice || "",
+        isPrinted: t.isPrinted,
       }));
     }
 
