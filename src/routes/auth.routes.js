@@ -2,7 +2,7 @@
 const router = require("express").Router();
 const auth = require("../middlewares/auth.middleware");
 const role = require("../middlewares/role.middleware");
-const { login, register } = require("../controllers/auth.controller");
+const { login, register,changePassword } = require("../controllers/auth.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const { getAllUsers } = require("../controllers/auth.controller"); // Import controller
 
@@ -19,4 +19,5 @@ router.get("/accounts", auth, role("ACCOUNTS", "SUPERADMIN"), (_, res) =>
 router.get("/users", auth, role("SUPERADMIN"), getAllUsers);
 
 router.post("/register", auth, role("SUPERADMIN"), register);
+router.put("/change-password", auth, changePassword);
 module.exports = router;

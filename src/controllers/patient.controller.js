@@ -112,7 +112,7 @@ exports.getAllPatients = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 100,
+      limit = 10,
       search = "",
       fromDate = "",
       toDate = "",

@@ -59,8 +59,8 @@ exports.getAllTests = async (req, res) => {
     if (search) {
       query.name = { $regex: search, $options: "i" };
     }
-      if (category) {
-      query.category = new mongoose.Types.ObjectId(category); 
+     if (category && category.trim() !== "" && category !== "undefined") {
+      query.category = category; 
     }
     if (status) {
       query.isActive = status === "active";

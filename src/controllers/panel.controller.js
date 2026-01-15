@@ -75,7 +75,6 @@ exports.getAllPanels = async (req, res) => {
         .limit(limitNum),
       Panel.countDocuments(query),
     ]);
-    console.log(panels, "......")
 
     res.json({
       success: true,
