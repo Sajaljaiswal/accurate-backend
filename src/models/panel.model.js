@@ -50,14 +50,6 @@ const panelSchema = new mongoose.Schema(
         default: "Prepaid",
       },
     },
-
-    /* ---------------- SECURITY ---------------- */
-    portalUsername: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-
     isActive: {
       type: Boolean,
       default: true,

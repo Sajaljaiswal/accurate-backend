@@ -5,7 +5,7 @@ exports.registerPanel = async (req, res) => {
     const data = req.body;
 
     // Basic validation
-    if (!data.name || !data.contact?.mobile) {
+    if (!data.name) {
       return res.status(400).json({
         success: false,
         message: "Hospital name and mobile are required",
@@ -30,7 +30,6 @@ exports.registerPanel = async (req, res) => {
         creditLimit: data.billing?.creditLimit,
         paymentCycle: data.billing?.paymentCycle,
       },
-      portalUsername: data.portalUsername,
       isActive: data.isActive,
       createdBy: req.user?._id, // optional (JWT)
     });
@@ -41,13 +40,6 @@ exports.registerPanel = async (req, res) => {
       data: panel,
     });
   } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Portal username already exists",
-      });
-    }
-
     res.status(500).json({
       success: false,
       message: err.message,
@@ -57,7 +49,7 @@ exports.registerPanel = async (req, res) => {
 
 exports.getAllPanels = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = "" } = req.query;
+    const { page = 1, limit = 200, search = "" } = req.query;
 
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
