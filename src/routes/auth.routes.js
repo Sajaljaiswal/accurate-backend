@@ -2,8 +2,7 @@
 const router = require("express").Router();
 const auth = require("../middlewares/auth.middleware");
 const role = require("../middlewares/role.middleware");
-const { login, register,changePassword } = require("../controllers/auth.controller");
-const authMiddleware = require("../middlewares/auth.middleware");
+const { login, register,changePassword, updateUser, deleteUser } = require("../controllers/auth.controller");
 const { getAllUsers } = require("../controllers/auth.controller"); // Import controller
 
 router.post("/login", login);
@@ -15,6 +14,10 @@ router.get("/admin", auth, role("SUPERADMIN"), (_, res) =>
 router.get("/accounts", auth, role("ACCOUNTS", "SUPERADMIN"), (_, res) =>
   res.json({ message: "Accounts Access" })
 );
+router.put('/users/:id', updateUser);
+
+// URL: /api/auth/users/:id
+router.delete('/users/:id', deleteUser);
 
 router.get("/users", auth, role("SUPERADMIN"), getAllUsers);
 
