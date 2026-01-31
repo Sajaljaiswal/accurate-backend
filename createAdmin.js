@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const User = require("./src/models/user.model");
 
 (async () => {
-  await mongoose.connect(process.env.MONGO_URI);
+  await mongoose.connect(process.env.MONGO_URI_LIVE);
 
   const admin = await User.create({
     username: "sajal",
